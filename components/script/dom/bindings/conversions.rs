@@ -97,11 +97,15 @@ impl<T: Float + FromJSValConvertible<Config=()>> FromJSValConvertible for Finite
 impl <T: Reflectable + IDLInterface> FromJSValConvertible for Root<T> {
     type Config = ();
 
-    unsafe fn from_jsval(_cx: *mut JSContext,
+    unsafe fn from_jsval(cx: *mut JSContext,
                          value: HandleValue,
                          _config: Self::Config)
-        -> Result<Root<T>, ()> {
-        root_from_handlevalue(value)
+                         -> Result<Root<T>, ()> {
+        let result = root_from_handlevalue(value);
+        if let Err(()) = result {
+            throw_type_error(cx, "value is not an object");
+        }
+        result
     }
 }
 
@@ -326,6 +330,9 @@ pub fn root_from_object<T>(obj: *mut JSObject) -> Result<Root<T>, ()>
 pub fn native_from_handlevalue<T>(v: HandleValue) -> Result<*const T, ()>
     where T: Reflectable + IDLInterface
 {
+    if !v.get().is_object() {
+        return Err(());
+    }
     native_from_object(v.get().to_object())
 }
 
@@ -333,6 +340,9 @@ pub fn native_from_handlevalue<T>(v: HandleValue) -> Result<*const T, ()>
 pub fn root_from_handlevalue<T>(v: HandleValue) -> Result<Root<T>, ()>
     where T: Reflectable + IDLInterface
 {
+    if !v.get().is_object() {
+        return Err(());
+    }
     root_from_object(v.get().to_object())
 }
 
